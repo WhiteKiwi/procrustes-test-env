@@ -15,17 +15,19 @@ import { UserSession } from './mock-data/models'
 
 import packageInfo from '../../package.json'
 const version = packageInfo['scylla-version']
+const IMAGE_NAME = `procrustes-scylla:${version}`
+const CONTAINER_NAME = 'procrustes-scylla-test'
 
 // Check if the docker image exists
 async function isImageExist(version: string) {
-	const existsImageName = await executeShellCommand(`docker images procrustes-scylla:${version} --format '{{.Tag}}'`)
+	const existsImageName = await executeShellCommand(`docker images ${IMAGE_NAME} --format '{{.Tag}}'`)
 	return existsImageName === version
 }
 
 // Teardown exist docker containers
 async function teardownDockerContainer(version: string) {
 	try {
-		await executeShellCommand('docker kill procrustes-scylla-test')
+		await executeShellCommand(`docker kill ${CONTAINER_NAME}`)
 		console.log('Tear down the exist db')
 	} catch (e) {}
 }
@@ -34,29 +36,29 @@ async function teardownDockerContainer(version: string) {
 async function buildDockerImage(version: string, path: string) {
 	await teardownDockerContainer(version)
 
-	await executeShellCommand(`docker build -t procrustes-scylla:${version} ${path}`)
+	await executeShellCommand(`docker build -t ${IMAGE_NAME} ${path}`)
 
 	let tries = 0
 	while (await isImageExist(version)) {
-		// Wait up to 30 seconds
-		if (tries++ === 6) throw new FailToBuildDockerImageError(`procrustes-scylla:${version}`)
-		await sleep(5000)
+		// Wait up to 2 minutes
+		if (tries++ === 12) throw new FailToBuildDockerImageError(`${IMAGE_NAME}`)
+		await sleep(10000)
 	}
 }
 
 // Check if the docker container is running
 async function isDockerContainerRunning(version: string) {
-	return !isEmpty(await executeShellCommand(`docker ps -f 'ancestor=procrustes-scylla:${version}' --format '{{.Image}}'`))
+	return !isEmpty(await executeShellCommand(`docker ps -f 'ancestor=${IMAGE_NAME}' --format '{{.Image}}'`))
 }
 
 // Run a Docker Container
 async function runDockerContainer(version: string) {
-	await executeShellCommand(`docker run -d --rm -p 9042:9042 --name procrustes-scylla-test procrustes-scylla:${version}`)
+	await executeShellCommand(`docker run -d --rm -p 9042:9042 --name ${CONTAINER_NAME} ${IMAGE_NAME}`)
 
 	let tries = 0
 	while (!(await isDockerContainerRunning(version))) {
 		// Wait up to 30 seconds
-		if (tries++ === 6) throw new FailToRunDockerContainerError(`procrustes-scylla:${version}`)
+		if (tries++ === 6) throw new FailToRunDockerContainerError(IMAGE_NAME)
 		await sleep(5000)
 	}
 }
@@ -70,7 +72,7 @@ async function connectToDB(client: Client) {
 			break
 		} catch (e) {
 			// Wait up to 60 seconds
-			if (tries++ === 12) throw new FailToConnectToDBError(`procrustes-scylla:${version}`)
+			if (tries++ === 12) throw new FailToConnectToDBError(IMAGE_NAME)
 			await sleep(5000)
 		}
 	}
