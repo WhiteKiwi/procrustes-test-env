@@ -1,12 +1,15 @@
 import { isEmpty } from 'lodash'
 import fs from 'fs'
 import path from 'path'
-import { sleep, executeShellCommand } from '../utils'
 import {
-	FailToBuildDockerImageError,
-	FailToRunDockerContainerError,
-	FailToConnectToDBError,
-} from '../errors'
+	sleep,
+	isImageExist,
+	isDockerContainerRunning,
+	teardownDockerContainer,
+	buildDockerImage,
+	runDockerContainer,
+} from '../utils'
+import { FailToConnectToDBError } from '../errors'
 
 import { Client, mapping, auth } from 'cassandra-driver'
 import SCYLLA from './test-env'
@@ -17,51 +20,6 @@ import packageInfo from '../../package.json'
 const version = packageInfo['scylla-version']
 const IMAGE_NAME = `procrustes-scylla:${version}`
 const CONTAINER_NAME = 'procrustes-scylla-test'
-
-// Check if the docker image exists
-async function isImageExist(version: string) {
-	const existsImageName = await executeShellCommand(`docker images ${IMAGE_NAME} --format '{{.Tag}}'`)
-	return existsImageName === version
-}
-
-// Teardown exist docker containers
-async function teardownDockerContainer(version: string) {
-	try {
-		await executeShellCommand(`docker kill ${CONTAINER_NAME}`)
-		console.log('Tear down the exist db')
-	} catch (e) {}
-}
-
-// Build a new Docker image
-async function buildDockerImage(version: string, path: string) {
-	await teardownDockerContainer(version)
-
-	await executeShellCommand(`docker build -t ${IMAGE_NAME} ${path}`)
-
-	let tries = 0
-	while (await isImageExist(version)) {
-		// Wait up to 2 minutes
-		if (tries++ === 12) throw new FailToBuildDockerImageError(`${IMAGE_NAME}`)
-		await sleep(10000)
-	}
-}
-
-// Check if the docker container is running
-async function isDockerContainerRunning(version: string) {
-	return !isEmpty(await executeShellCommand(`docker ps -f 'ancestor=${IMAGE_NAME}' --format '{{.Image}}'`))
-}
-
-// Run a Docker Container
-async function runDockerContainer(version: string) {
-	await executeShellCommand(`docker run -d --rm -p 9042:9042 --name ${CONTAINER_NAME} ${IMAGE_NAME}`)
-
-	let tries = 0
-	while (!(await isDockerContainerRunning(version))) {
-		// Wait up to 30 seconds
-		if (tries++ === 6) throw new FailToRunDockerContainerError(IMAGE_NAME)
-		await sleep(5000)
-	}
-}
 
 // Wait for db to be ready
 async function connectToDB(client: Client) {
@@ -162,20 +120,23 @@ async function injectMockDataToDB(mockData: any) {
 }
 
 export default async () => {
-	if (!(await isImageExist(version))) {
+	if (!(await isImageExist(IMAGE_NAME, version))) {
+		const isTeardowned = await teardownDockerContainer(CONTAINER_NAME)
+		if (isTeardowned) console.log('Tear down the exist container')
+
 		console.log('Docker image is not the latest version')
 		console.log('Start to build new image...')
-		await buildDockerImage(version, path.join(__dirname, 'docker/'))
+		await buildDockerImage(IMAGE_NAME, version, path.join(__dirname, 'docker/'))
 	}
-    
-	if (await isDockerContainerRunning(version)) {
+
+	if (await isDockerContainerRunning(IMAGE_NAME)) {
 		console.log('Docker container is already running')
 		console.log('Drop keyspace...')
 		await dropKeySpace(SCYLLA.KEYSPACE)
 	} else {
 		console.log('There is no docker container')
 		console.log('Run a new container...')
-		await runDockerContainer(version)
+		await runDockerContainer(CONTAINER_NAME, IMAGE_NAME, '-d --rm -p 9042:9042')
 	}
         
 	console.log('Set up the schema to DB...')
