@@ -1,7 +1,7 @@
 {
   "name": "procrustes-test-env",
-  "version": "0.0.1",
-  "scylla-version": "0.0.1",
+  "version": "1.0.0",
+  "scylla-version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
