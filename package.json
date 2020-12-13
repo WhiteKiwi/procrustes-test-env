@@ -5,7 +5,10 @@
   "description": "",
   "main": "src/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "clean": "rimraf dist",
+    "copy-files": "copyfiles src/**/Dockerfile dist && copyfiles src/**/*.sql dist && copyfiles src/**/*.cql dist",
+    "build": "npm run clean && tsc && npm run copy-files",
+    "test:scylla": "npm run build && node dist/src/scylla/test.js"
   },
   "repository": {
     "type": "git",
@@ -13,7 +16,9 @@
   },
   "dependencies": {
     "cassandra-driver": "^4.6.1",
-    "lodash": "^4.17.20"
+    "copyfiles": "^2.4.1",
+    "lodash": "^4.17.20",
+    "rimraf": "^3.0.2"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.165",

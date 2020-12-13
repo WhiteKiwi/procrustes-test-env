@@ -1,5 +1,6 @@
 import { isEmpty } from 'lodash'
 import fs from 'fs'
+import path from 'path'
 import { sleep, executeShellCommand } from '../utils'
 import {
 	FailToBuildDockerImageError,
@@ -98,7 +99,7 @@ async function setSchemaToDB() {
 	await connectToDB(client)
     
 	// execute cql
-	const queries = await loadQueriesFromCQLFile('./node_modules/procrustest-test-env/src/scylla/schema-dump.cql')
+	const queries = await loadQueriesFromCQLFile(path.join(__dirname, 'schema-dump.cql'))
 	for (const query of queries) {
 		await client.execute(query)
 	}
@@ -162,7 +163,7 @@ export default async () => {
 	if (!(await isImageExist(version))) {
 		console.log('Docker image is not the latest version')
 		console.log('Start to build new image...')
-		await buildDockerImage(version, './node_modules/procrustest-test-env/src/scylla/docker/')
+		await buildDockerImage(version, path.join(__dirname, 'docker/'))
 	}
     
 	if (await isDockerContainerRunning(version)) {
@@ -176,7 +177,7 @@ export default async () => {
 	}
         
 	console.log('Set up the schema to DB...')
-	await setSchemaToDB(isTest)
+	await setSchemaToDB()
 
 	console.log('Inject mock data to DB...')
 	await injectMockDataToDB(mockData)
