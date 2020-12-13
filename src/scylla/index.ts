@@ -1,5 +1,7 @@
 import setup from './setup'
+import mockData from './mock-data'
 
-export default {
+export const scylla = {
 	setup,
+	mockData,
 }
