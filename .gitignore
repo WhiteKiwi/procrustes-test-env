@@ -1,0 +1,8 @@
+# node files
+node_modules
+
+# vscode files
+.vscode
+
+# etc
+.DS_Store
