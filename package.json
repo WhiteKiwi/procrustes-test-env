@@ -11,7 +11,12 @@
     "type": "git",
     "url": "git+https://github.com/WhiteKiwi/procrustes-test-env.git"
   },
+  "dependencies": {
+    "cassandra-driver": "^4.6.1",
+    "lodash": "^4.17.20"
+  },
   "devDependencies": {
+    "@types/lodash": "^4.14.165",
     "@types/node": "^14.14.13",
     "@typescript-eslint/eslint-plugin": "^4.8.1",
     "@typescript-eslint/parser": "^4.8.1",
@@ -23,9 +28,5 @@
   "bugs": {
     "url": "https://github.com/WhiteKiwi/procrustes-test-env/issues"
   },
-  "homepage": "https://github.com/WhiteKiwi/procrustes-test-env#readme",
-  "dependencies": {
-    "cassandra-driver": "^4.6.1",
-    "lodash": "^4.17.20"
-  }
+  "homepage": "https://github.com/WhiteKiwi/procrustes-test-env#readme"
 }
